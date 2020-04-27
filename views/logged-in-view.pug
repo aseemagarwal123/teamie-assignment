@@ -1,0 +1,118 @@
+doctype=html
+html
+    head
+        title   Twubric Assignment
+        link(rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/bulma/0.8.2/css/bulma.css' integrity='sha256-8BrtNNtStED9syS9F+xXeP815KGv6ELiCfJFQmGi1Bg=' crossorigin='anonymous')
+    body
+        .section
+            .container
+                .columns.has-text-centered.is-multiline.is-centered
+                    .column.is-one-quarter
+                        .card
+                            .card-image
+                                figure.image.is-4by3
+                                    if(user.profile_image_url)
+                                        img(src=user.profile_image_url)
+                                    else
+                                        img(src='https://bulma.io/images/placeholders/1280x960.png' alt='Placeholder image')
+                            .card-content
+                                .media
+                                    .media-left
+                                        figure.image.is-48x48
+                                            img(src='https://bulma.io/images/placeholders/96x96.png' alt='Placeholder image')
+                                    .media-content
+                                        p.title.is-4 #{user.name}
+                                        p.subtitle.is-6 @#{user.screen_name}
+                                .content
+                    .column.is-three-quarters
+                        .tabs
+                            ul
+                                li.is-active
+                                    a
+                                        span
+                                            i.fas.fa-user-friends
+                                        span
+                                        |   &nbsp;Followers
+                        .container.section
+                            .content-tab
+                                .columns#followers-content.is-multiline
+                                .columns#follower-detail-content
+                            #some-other.content-tab(style='display:none')
+                            
+        script(defer='' src='https://use.fontawesome.com/releases/v5.3.1/js/all.js')
+        script(src='https://code.jquery.com/jquery-3.5.0.min.js' integrity='sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=' crossorigin='anonymous')
+        script.
+            $(document).ready(function() {
+               const accountToken = '#{token}';
+               const screenName = '#{user.screen_name}';
+               console.log(accountToken,screenName);
+
+               $('#followers-content').empty();
+               $.ajax({
+                    type: "GET",
+                    url: `/app/followers?screen_name=${screenName}`,
+                    headers: { "x-auth-token" : accountToken },
+                    contentType: 'application/json',
+                    success: function (data) {
+                            console.log(data);
+                            if(data.length > 0){
+                                for(i of data){
+                                    var iter = $("<div class='column is-one-third'><a href='#' class='profile-url'><article class='media'><figure class='media-left'><p class='image is-64x64'><img class='follower-img' /></p></figure><div class='media-content'><div class='content'><p id='follower-info'><strong id='follower-name'></strong><small id='follower-screen-name'></small></p></div></div></article></a></div>");
+                                    iter.find('.follower-img').attr({
+                                        'src': i.profile_image_url,
+                                        'data-follower': i.id_str
+                                    });
+                                    iter.find('.profile-url').attr({
+                                        'data-follower': i.id_str
+                                    });
+                                    iter.find('.media').attr({
+                                        'data-follower': i.id_str
+                                    });
+                                    iter.find('#follower-info').attr({
+                                        'data-follower': i.id_str
+                                    });
+                                    iter.find('#follower-screen-name').html(` ${i.screen_name}`).attr({'data-follower': i.id_str}).end();
+                                    iter.find('#follower-name').html(i.name).attr({'data-follower': i.id_str}).end();
+                                    $('#followers-content').append(iter);
+                                }
+                                var viewDetails = document.querySelectorAll('.profile-url');
+
+                                console.log(viewDetails);
+                                for(var i = 0; i < viewDetails.length; i++){
+                                    viewDetails[i].addEventListener('click',function(e){
+                                        e.preventDefault();
+                                        console.log(e.path);
+                                        console.log(e.target.dataset.follower);
+                                        const followerId = e.target.dataset.follower;
+                                        $.ajax({
+                                            type: "GET",
+                                            url: `/app/${followerId}/rubric.json`,
+                                            headers: { "x-auth-token" : accountToken },
+                                            success: function (data) {
+                                                if(data){
+                                                    console.log(data);
+                                                    var iter = $(`<div class='column'><div class="card">
+                                                    <header class="card-header">
+                                                    <p class="card-header-title">${data.follower.screen_name}</p></header><div class="card-content columns is-multiline"><div class="column is-one-fourth"><p class="subtitle">Followers:</p><p class="subtitle">${data.follower.followers_count}</p></div><div class="column is-one-fourth"><p class="subtitle">Friends:</p><p class="subtitle">${data.follower.friends_count}</p></div><div class="column is-one-fourth"><p class="subtitle">Statuses:</p><p class="subtitle">${data.follower.statuses_count}</p></div><div class="column is-one-fourth"><p class="subtitle">Favorites:</p><p class='subtitle'>${data.follower.favourites_count}</p></div><div class="column is-one-fourth"><p class="subtitle">Rubric Chirpy:</p><p class="subtitle">${data.follower.rubric.chirpy}</p></div><div class="column is-one-fourth"><p class="subtitle">Rubric Friends:</p><p class="subtitle">${data.follower.rubric.friends}</p></div><div class="column is-one-fourth"><p class="subtitle">Rubric Influence:</p><p class="subtitle">${data.follower.rubric.influence}</p></div><div class="column is-one-fourth"><p class="subtitle">Rubric Total:</p><p class="subtitle">${data.follower.rubric.total}</p></div></div></div></div>
+                                                    `);
+                                                    $('#follower-detail-content').empty();
+                                                    $('#follower-detail-content').append(iter);
+                                                }
+                                                else{
+                                            var errorP = $("<div class='column is-full'><div class='notification is-danger'>Error Fetching Data from API. Please Check Console</div></div>");
+                                            $('#follower-detail-content').append(errorP);
+                                                }
+                                                }, error: function(e) {
+                                                var errorP = $("<div class='column is-full'><div class='notification is-danger'>Error Fetching Data from API. Please Check Console</div></div>");
+                                                $('#follower-detail-content').append(errorP);
+                                                }
+                                        });
+                                    })
+                                }
+                            }
+                        }, error: function(e) {
+                            var errorP = $("<div class='column is-full'><div class='notification is-danger'>Error Fetching Data from API. Please Check Console</div></div>");
+                            $('#followers-content').append(errorP);
+                        }
+                    });
+                });
